@@ -1,27 +1,46 @@
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
-import { getPromptsByGradeAndSection } from '@/data/prompts';
-import { isPromptFinished, unmarkPromptFinished } from '@/lib/storage';
+import { getPromptsByGradeAndSection, getFinishedPromptIds, unmarkPromptAsFinished, JournalPrompt } from '@/lib/promptService';
 import { toast } from 'sonner';
 
 const Manual = () => {
   const navigate = useNavigate();
   const { grade, section } = useParams<{ grade: string; section: string }>();
-  
+
   const gradeNum = parseInt(grade!) as 6 | 7 | 8;
   const sectionStr = section as 'Humanity' | 'Honors';
-  
-  const prompts = getPromptsByGradeAndSection(gradeNum, sectionStr);
 
-  const handleUnmark = (promptId: string, e: React.MouseEvent) => {
+  const [prompts, setPrompts] = useState<JournalPrompt[]>([]);
+  const [finishedIds, setFinishedIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      const [fetchedPrompts, finished] = await Promise.all([
+        getPromptsByGradeAndSection(gradeNum, sectionStr),
+        getFinishedPromptIds(gradeNum, sectionStr)
+      ]);
+      setPrompts(fetchedPrompts);
+      setFinishedIds(finished);
+      setLoading(false);
+    };
+    loadData();
+  }, [gradeNum, sectionStr]);
+
+  const handleUnmark = async (promptId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    unmarkPromptFinished(promptId);
+    await unmarkPromptAsFinished(promptId);
+    setFinishedIds(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(promptId);
+      return newSet;
+    });
     toast.success('Prompt unmarked and returned to available prompts');
-    // Force re-render
-    window.location.reload();
   };
 
   return (
@@ -46,9 +65,14 @@ const Manual = () => {
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {prompts.map((prompt) => {
-            const finished = isPromptFinished(prompt.id);
+        {loading ? (
+          <div className="text-center py-8">
+            <p>Loading prompts...</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {prompts.map((prompt) => {
+              const finished = finishedIds.has(prompt.id);
             
             return (
               <Card
@@ -97,7 +121,8 @@ const Manual = () => {
               </Card>
             );
           })}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

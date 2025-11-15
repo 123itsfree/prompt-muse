@@ -2,48 +2,51 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
-import { getPromptsByGradeAndSection } from '@/data/prompts';
-import { getFinishedPromptsByGradeAndSection } from '@/lib/storage';
+import { getPromptsByGradeAndSection, getFinishedPromptIds, JournalPrompt } from '@/lib/promptService';
 import SpinWheel from '@/components/SpinWheel';
 
 const Wheel = () => {
   const navigate = useNavigate();
   const { grade, section } = useParams<{ grade: string; section: string }>();
-  
+
   const gradeNum = parseInt(grade!) as 6 | 7 | 8;
   const sectionStr = section as 'Humanity' | 'Honors';
-  
-  const allPrompts = getPromptsByGradeAndSection(gradeNum, sectionStr);
-  const finishedPrompts = getFinishedPromptsByGradeAndSection(gradeNum, sectionStr);
-  const finishedIds = new Set(finishedPrompts.map(fp => fp.promptId));
-  
-  // Only include unfinished prompts in the wheel
-  const availablePrompts = allPrompts.filter(prompt => !finishedIds.has(prompt.id));
-  
-  // State for the 5 random prompts
-  const [wheelPrompts, setWheelPrompts] = useState<typeof availablePrompts>([]);
 
-  // Function to get 5 random prompts
-  const getRandomPrompts = () => {
-    if (availablePrompts.length <= 5) {
-      return availablePrompts;
+  const [allPrompts, setAllPrompts] = useState<JournalPrompt[]>([]);
+  const [availablePrompts, setAvailablePrompts] = useState<JournalPrompt[]>([]);
+  const [wheelPrompts, setWheelPrompts] = useState<JournalPrompt[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      const [prompts, finishedIds] = await Promise.all([
+        getPromptsByGradeAndSection(gradeNum, sectionStr),
+        getFinishedPromptIds(gradeNum, sectionStr)
+      ]);
+      setAllPrompts(prompts);
+      const available = prompts.filter(p => !finishedIds.has(p.id));
+      setAvailablePrompts(available);
+      setWheelPrompts(getRandomPrompts(available));
+      setLoading(false);
+    };
+    loadData();
+  }, [gradeNum, sectionStr]);
+
+  const getRandomPrompts = (prompts: JournalPrompt[]) => {
+    if (prompts.length <= 5) {
+      return prompts;
     }
-    
-    const shuffled = [...availablePrompts].sort(() => Math.random() - 0.5);
+    const shuffled = [...prompts].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, 5);
   };
-
-  // Initialize with random prompts
-  useEffect(() => {
-    setWheelPrompts(getRandomPrompts());
-  }, [availablePrompts.length]);
 
   const handleSelectPrompt = (prompt: any) => {
     navigate(`/prompt/${prompt.id}`);
   };
 
   const handleRefresh = () => {
-    setWheelPrompts(getRandomPrompts());
+    setWheelPrompts(getRandomPrompts(availablePrompts));
   };
 
   return (

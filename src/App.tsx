@@ -10,6 +10,7 @@ import Prompts from "./pages/Prompts";
 import Wheel from "./pages/Wheel";
 import Manual from "./pages/Manual";
 import PromptDisplay from "./pages/PromptDisplay";
+import Admin from "./pages/Admin";
 import ProtectedRoute from "./pages/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -63,13 +64,21 @@ const App = () => (
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="/prompt/:id" 
+          <Route
+            path="/prompt/:id"
             element={
               <ProtectedRoute>
                 <PromptDisplay />
               </ProtectedRoute>
-            } 
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <Admin />
+              </ProtectedRoute>
+            }
           />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

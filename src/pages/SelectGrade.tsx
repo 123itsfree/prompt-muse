@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { GraduationCap } from 'lucide-react';
+import { GraduationCap, Settings } from 'lucide-react';
 
 const SelectGrade = () => {
   const navigate = useNavigate();
@@ -15,6 +15,17 @@ const SelectGrade = () => {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
+        <div className="flex justify-end mb-4">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/admin')}
+            className="gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Admin Panel
+          </Button>
+        </div>
+
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-primary rounded-full mb-4 shadow-medium">
             <GraduationCap className="w-10 h-10 text-primary-foreground" />

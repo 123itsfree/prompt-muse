@@ -5,28 +5,50 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Volume2, VolumeX, Image, CheckCircle2, Circle } from 'lucide-react';
-import { journalPrompts } from '@/data/prompts';
-import { isPromptFinished, markPromptFinished, unmarkPromptFinished } from '@/lib/storage';
+import { getPromptById, markPromptAsFinished, unmarkPromptAsFinished, isPromptFinished as checkPromptFinished, JournalPrompt } from '@/lib/promptService';
+import { ttsService } from '@/lib/ttsService';
 import { toast } from 'sonner';
 
 const PromptDisplay = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  
-  const prompt = journalPrompts.find(p => p.id === id);
+
+  const [prompt, setPrompt] = useState<JournalPrompt | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showExample, setShowExample] = useState(false);
   const [finished, setFinished] = useState(false);
-  const [synthesis, setSynthesis] = useState<SpeechSynthesis | null>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setSynthesis(window.speechSynthesis);
-    }
-    if (prompt) {
-      setFinished(isPromptFinished(prompt.id));
-    }
-  }, [prompt]);
+    const loadPrompt = async () => {
+      if (!id) return;
+
+      setLoading(true);
+      const fetchedPrompt = await getPromptById(id);
+      setPrompt(fetchedPrompt);
+
+      if (fetchedPrompt) {
+        const isFinished = await checkPromptFinished(fetchedPrompt.id);
+        setFinished(isFinished);
+      }
+
+      setLoading(false);
+    };
+
+    loadPrompt();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card>
+          <CardContent className="p-8">
+            <p className="text-center">Loading prompt...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!prompt) {
     return (
@@ -46,28 +68,23 @@ const PromptDisplay = () => {
   }
 
   const handlePlayPause = () => {
-    if (!synthesis) return;
-
     if (isPlaying) {
-      synthesis.cancel();
+      ttsService.stop();
       setIsPlaying(false);
     } else {
-      const utterance = new SpeechSynthesisUtterance(
-        `${prompt.title}. ${prompt.text}. ${prompt.instructions}`
-      );
-      utterance.onend = () => setIsPlaying(false);
-      synthesis.speak(utterance);
+      const textToSpeak = `${prompt.title}. ${prompt.text}. ${prompt.instructions}`;
+      ttsService.speak(textToSpeak, () => setIsPlaying(false));
       setIsPlaying(true);
     }
   };
 
-  const toggleFinished = () => {
+  const toggleFinished = async () => {
     if (finished) {
-      unmarkPromptFinished(prompt.id);
+      await unmarkPromptAsFinished(prompt.id);
       setFinished(false);
       toast.success('Prompt unmarked');
     } else {
-      markPromptFinished(prompt.id, prompt.grade, prompt.section);
+      await markPromptAsFinished(prompt.id);
       setFinished(true);
       toast.success('Prompt marked as finished!');
     }
