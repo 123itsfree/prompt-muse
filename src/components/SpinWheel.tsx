@@ -102,14 +102,44 @@ const SpinWheel = ({ prompts, onSelect }: SpinWheelProps) => {
               
               const largeArc = segmentAngle > 180 ? 1 : 0;
               
+              // Calculate text position (middle of segment)
+              const midAngle = startAngle + segmentAngle / 2;
+              const midRad = (midAngle * Math.PI) / 180;
+              const textRadius = 35; // Position text at 70% of radius
+              const textX = 50 + textRadius * Math.cos(midRad);
+              const textY = 50 + textRadius * Math.sin(midRad);
+              
+              // Truncate long titles
+              const maxLength = segmentAngle > 30 ? 20 : 12;
+              const displayTitle = prompt.title.length > maxLength 
+                ? prompt.title.substring(0, maxLength - 3) + '...'
+                : prompt.title;
+              
               return (
-                <path
-                  key={prompt.id}
-                  d={`M 50 50 L ${x1} ${y1} A 50 50 0 ${largeArc} 1 ${x2} ${y2} Z`}
-                  fill={color}
-                  stroke="white"
-                  strokeWidth="0.5"
-                />
+                <g key={prompt.id}>
+                  <path
+                    d={`M 50 50 L ${x1} ${y1} A 50 50 0 ${largeArc} 1 ${x2} ${y2} Z`}
+                    fill={color}
+                    stroke="white"
+                    strokeWidth="0.5"
+                  />
+                  <text
+                    x={textX}
+                    y={textY}
+                    fill="white"
+                    fontSize={segmentAngle > 30 ? "3" : "2.5"}
+                    fontWeight="bold"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    transform={`rotate(${midAngle + 90}, ${textX}, ${textY})`}
+                    style={{
+                      textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    {displayTitle}
+                  </text>
+                </g>
               );
             })}
           </svg>
