@@ -1,6 +1,7 @@
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { getPromptsByGradeAndSection } from '@/data/prompts';
 import { getFinishedPromptsByGradeAndSection } from '@/lib/storage';
 import SpinWheel from '@/components/SpinWheel';
@@ -18,9 +19,31 @@ const Wheel = () => {
   
   // Only include unfinished prompts in the wheel
   const availablePrompts = allPrompts.filter(prompt => !finishedIds.has(prompt.id));
+  
+  // State for the 5 random prompts
+  const [wheelPrompts, setWheelPrompts] = useState<typeof availablePrompts>([]);
+
+  // Function to get 5 random prompts
+  const getRandomPrompts = () => {
+    if (availablePrompts.length <= 5) {
+      return availablePrompts;
+    }
+    
+    const shuffled = [...availablePrompts].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 5);
+  };
+
+  // Initialize with random prompts
+  useEffect(() => {
+    setWheelPrompts(getRandomPrompts());
+  }, [availablePrompts.length]);
 
   const handleSelectPrompt = (prompt: any) => {
     navigate(`/prompt/${prompt.id}`);
+  };
+
+  const handleRefresh = () => {
+    setWheelPrompts(getRandomPrompts());
   };
 
   return (
@@ -41,12 +64,22 @@ const Wheel = () => {
             Grade {grade} - {section}
           </p>
           <p className="text-sm text-muted-foreground mt-1">
-            {availablePrompts.length} of {allPrompts.length} prompts remaining
+            Showing 5 random prompts from {availablePrompts.length} available
           </p>
         </div>
 
-        <div className="flex justify-center">
-          <SpinWheel prompts={availablePrompts} onSelect={handleSelectPrompt} />
+        <div className="flex flex-col items-center gap-6">
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            className="gap-2"
+            disabled={availablePrompts.length === 0}
+          >
+            <RefreshCw className="w-4 h-4" />
+            Get Different Prompts
+          </Button>
+
+          <SpinWheel prompts={wheelPrompts} onSelect={handleSelectPrompt} />
         </div>
       </div>
     </div>
